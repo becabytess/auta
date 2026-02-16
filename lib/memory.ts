@@ -23,12 +23,32 @@ export async function addMessage(chatId: number, role: 'user' | 'assistant' | 's
 }
 
 export async function getFacts(userId: number) {
-  const key = `facts:${userId}`
-  return await redis.smembers(key)
+  const coreKey = `facts:core:${userId}`
+  const generalKey = `facts:general:${userId}`
+  // Legacy key check
+  const legacyKey = `facts:${userId}`
+  
+  const [core, general, legacy] = await Promise.all([
+     redis.smembers(coreKey),
+     redis.smembers(generalKey),
+     redis.smembers(legacyKey)
+  ])
+
+  // Merge legacy into general?
+  const allGeneral = [...general, ...legacy]
+
+  // Return formatted strings
+  const coreFacts = core.map((f: string) => `[CORE] ${f}`)
+  const generalFacts = allGeneral.map((f: string) => `[GENERAL] ${f}`)
+  
+  return [...coreFacts, ...generalFacts]
 }
 
-export async function saveFact(userId: number, fact: string) {
-  const key = `facts:${userId}`
+export async function saveFact(userId: number, fact: string, category: 'core' | 'general' = 'general') {
+  const key = `facts:${category}:${userId}`
+  // Also keep legacy key support? Or migrate? 
+  // For simplicity, just use new keys.
+  // Ideally we should remove from old key if moving, but whatever.
   await redis.sadd(key, fact)
 }
 

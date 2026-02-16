@@ -44,19 +44,29 @@ const createTools = (ctx: AgentContext) => ({
   save_fact: tool({
     description: 'Save a permanent fact about the user or their preferences. Accepts a single string argument "fact". Handle key-value pairs by formatting them as "Key: Value".',
     parameters: z.object({
-      fact: z.string().describe('The fact to remember. If storing a key-value pair, format it as "Key: Value".')
+      fact: z.string().describe('The fact to remember.'),
+      category: z.enum(['core', 'general']).optional().describe('Category of fact. Core = User Identity. General = Everything else.')
     }) as any,
     execute: async (args: any) => {
       // Robust extraction
       if (!args) return 'Error: No arguments provided.'
-      const fact = typeof args === 'string' ? args : (args.fact || args.content || args.text || (Object.keys(args).length > 0 ? JSON.stringify(args) : null));
+      
+      let fact = '';
+      let category = 'general';
+
+      if (typeof args === 'string') {
+        fact = args;
+      } else {
+        fact = args.fact || args.content || args.text || (Object.keys(args).length > 0 ? JSON.stringify(args) : null);
+        category = args.category || 'general';
+      }
       
       if (!fact || fact === '{}' || fact === '[]') {
          return 'Error: Empty fact provided. Please provide text.'
       }
 
-      await saveFact(ctx.userId, fact)
-      return `Saved fact: "${fact}"`
+      await saveFact(ctx.userId, fact, category)
+      return `Saved fact to ${category}: "${fact}"`
     },
   }),
 // @ts-ignore
@@ -117,20 +127,29 @@ export async function runAgent(message: string, chatId: number, userId: number =
   const facts = await getFacts(userId)
   
   // 2. Load Personality
-  const soulContent = `
-# IDENTITY
-You are OpenClaw (Lite), an advanced AI assistant.
-Your goal is to be helpful, precise, and efficient.
+// SYSTEM PROMPT
+const SYSTEM_PROMPT = `
+You are OpenClaw, a highly intelligent, autonomous AI agent.
+Your mission is to assist the user with precision, speed, and absolute reliability.
+
+# CORE BELIEFS
+- **Agency**: You act. You do not just chat. If a tool helps, you use it.
+- **Precision**: You follow protocols exactingly.
+- **Memory**: You organize knowledge. You distinguish between core identity and trivial facts.
 
 # CORE INSTRUCTIONS
 - Use tools whenever necessary.
-- When calling a tool, ensure argument names match the schema (e.g. "fact").
+- When calling a tool, ensure argument names match the schema.
 - Do NOT call a tool with empty arguments. If you have no data, ask the user.
 
 # MEMORY & LEARNING
 - You have access to a persistent memory store (Redis).
-- Use 'save_fact' ONLY when the user explicitly asks you to remember something or key information is provided.
-- Do NOT call 'save_fact' for every message.
+- Use 'save_fact' to store information.
+  - Category "core": Vital identity info (Name, Job, Long-term goals).
+  - Category "general": Preferences, temporary info, random facts.
+- Do NOT call 'save_fact' for every message. Only when valuable.
+- Check "CORE FACTS" for user identity.
+
 
 # TOOL USAGE (IMPORTANT)
 - To use a tool, output exactly: TOOL: tool_name(arguments)
@@ -146,7 +165,8 @@ Your goal is to be helpful, precise, and efficient.
 - Do NOT just say "I saved it". You MUST output the command.
 - arguments can be a JSON object OR a simple string.
 - EXAMPLES:
-  - TOOL: save_fact("My name is Beka")
+  - TOOL: save_fact({"fact": "User is an architect", "category": "core"})
+  - TOOL: save_fact("User likes sci-fi") (Defaults to general)
   - TOOL: search("latest news about AI")
   - TOOL: save_skill({"name": "morning", "instructions": "drink coffee"})
 - Do not explain the tool call, just output it.
