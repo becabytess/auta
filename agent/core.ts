@@ -192,10 +192,8 @@ Be concise. Use tools if necessary.
     const response = result.text
     check.text = response
 
-    // Parse TOOL: name(args)
-    // Regex matches: TOOL: tool_name({ ... })
-    // We look for the LAST occurrence or FIRST? Usually separate lines.
-    const toolRegex = /TOOL:\s*(\w+)\s*\((.*?)\)/g
+    // Parse TOOL: name(args) - attempt to handle multiline with [\s\S]
+    const toolRegex = /TOOL:\s*(\w+)\s*\(([\s\S]*?)\)/g
     const matches = [...response.matchAll(toolRegex)]
 
     if (matches.length > 0) {
@@ -203,6 +201,12 @@ Be concise. Use tools if necessary.
        for (const match of matches) {
          const toolName = match[1]
          let argsString = match[2]
+         // If generic match captured too much (up to last closing paren?), might be issue. 
+         // But non-greedy *? SHOULD stop at first ')'
+         // If JSON has ')', it breaks. 
+         // Fallback: If JSON parse fails, maybe try to grab more? 
+         // Ideally model follows single line instruction.
+         
          let args: any = {}
          try {
             // Try to fix loose JSON if needed, or just parse

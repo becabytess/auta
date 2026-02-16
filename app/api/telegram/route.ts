@@ -41,10 +41,21 @@ export async function POST(req: NextRequest) {
         const agentResult = await runAgent(text, chatId, userId)
         const responseText = agentResult.text
         
-        // Comprehensive Debug Log
-        const stepsLog = agentResult.raw.steps?.map((s: any, i: number) => 
-          `Step ${i+1}: Output=${s.text?.substring(0,50) || 'None'}, Tools=${s.toolCalls?.map((t:any) => `${t.toolName}(${JSON.stringify(t.args)})`).join(', ') || 'None'}`
-        ).join('\n') || 'No steps info';
+        // Version Check
+        console.log('Running v0.2-text-based')
+        
+        // Comprehensive Debug Log (Handle both Native and Custom steps)
+        const stepsLog = (agentResult.raw.steps as any[])?.map((s: any, i: number) => {
+            // Native format
+            if (s.toolCalls) {
+                return `Step ${i+1}: Output=${s.text?.substring(0,50) || 'None'}, Tools=${s.toolCalls.map((t:any) => `${t.toolName}(${JSON.stringify(t.args)})`).join(', ')}`;
+            }
+            // Custom Message format
+            if (s.role) {
+                return `Step ${i+1} (${s.role}): ${s.content?.substring(0, 50)}...`
+            }
+            return `Step ${i+1}: Unknown format`
+        }).join('\n') || 'No steps info';
 
         if (!responseText || responseText.trim() === '') {
           if (agentResult.toolCalls && agentResult.toolCalls.length > 0) {
