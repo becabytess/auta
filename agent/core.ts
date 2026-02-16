@@ -18,7 +18,7 @@ const createTools = (ctx: AgentContext) => ({
 // @ts-ignore
   search: tool({
     description: 'Search the web for real-time information.',
-    parameters: z.object({ query: z.string() }) as any,
+    parameters: z.object({ query: z.string(), user_id: z.string().optional() }) as any,
     execute: async ({ query }: { query: string }) => {
       // Using DuckDuckGo Search (Keyless)
       try {
@@ -43,7 +43,7 @@ const createTools = (ctx: AgentContext) => ({
 // @ts-ignore
   save_memory: tool({
     description: 'Save a permanent fact about the user or their preferences.',
-    parameters: z.object({ fact: z.string() }) as any,
+    parameters: z.object({ fact: z.string(), user_id: z.string().optional() }) as any,
     execute: async ({ fact }: { fact: string }) => {
       await saveFact(ctx.userId, fact)
       return `Saved fact: "${fact}"`
@@ -54,7 +54,8 @@ const createTools = (ctx: AgentContext) => ({
     description: 'Save a new skill or procedure for future use. Use this when the user teaches you how to do something new.',
     parameters: z.object({
       name: z.string().describe('The name of the skill (e.g. "morning_routine", "check_flights")'),
-      instructions: z.string().describe('Step-by-step instructions on how to perform the task.')
+      instructions: z.string().describe('Step-by-step instructions on how to perform the task.'),
+      user_id: z.string().optional()
     }) as any,
     execute: async ({ name, instructions }: { name: string, instructions: string }) => {
       // We use Redis hash to store skills
@@ -65,7 +66,7 @@ const createTools = (ctx: AgentContext) => ({
 // @ts-ignore
   retrieve_skill: tool({
     description: 'Retrieve instructions for a specific skill.',
-    parameters: z.object({ name: z.string() }) as any,
+    parameters: z.object({ name: z.string(), user_id: z.string().optional() }) as any,
     execute: async ({ name }: { name: string }) => {
       return `(Skill retrieval is implicit via memory context. If you need specific details, ask the user or search memory for "Skill: ${name}")`
     }
@@ -140,7 +141,7 @@ Be concise. Use tools if necessary.
 
   // 5. Run AI
   const modelToUse = process.env.GROQ_API_KEY 
-    ? groq('llama-3.3-70b-versatile') 
+    ? groq('openai/gpt-oss-120b') 
     : openai('gpt-4o')
 
   console.log(`Using model: ${process.env.GROQ_API_KEY ? 'Groq Llama 3' : 'OpenAI GPT-4o'}`)
