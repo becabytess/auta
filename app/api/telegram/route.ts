@@ -34,6 +34,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true })
       }
 
+      if (text === '/flush_facts') {
+        const { redis } = require('@/lib/redis')
+        await redis.del(`facts:${userId}`)
+        await bot.api.sendMessage(chatId, 'Facts flushed.')
+        return NextResponse.json({ ok: true })
+      }
+
       console.log(`Received message from ${userId}: ${text}`)
 
       try {
