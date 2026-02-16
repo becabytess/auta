@@ -34,8 +34,7 @@ export async function getFacts(userId: number) {
      redis.smembers(legacyKey)
   ])
 
-  // Merge legacy into general?
-  const allGeneral = [...general, ...legacy]
+  const allGeneral = [...general, ...legacy].filter(f => f && f !== '{}' && f !== '[]')
 
   // Return formatted strings
   const coreFacts = core.map((f: string) => `[CORE] ${f}`)

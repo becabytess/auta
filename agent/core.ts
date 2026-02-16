@@ -185,10 +185,10 @@ Be concise. Use tools if necessary.
 
   // 5. Run AI with custom "ReAct" loop for robustness
   const modelToUse = process.env.GROQ_API_KEY 
-    ? groq('openai/gpt-oss-120b') 
+    ? groq('mixtral-8x7b-32768') 
     : openai('gpt-4o')
 
-  console.log(`Using model: ${process.env.GROQ_API_KEY ? 'Groq (gpt-oss-120b)' : 'OpenAI GPT-4o'}`)
+  console.log(`Using model: ${process.env.GROQ_API_KEY ? 'Groq (Mixtral 8x7b)' : 'OpenAI GPT-4o'}`)
 
   const tools = createTools({ userId, chatId });
   const searchToolExecute = tools.search.execute;
