@@ -43,16 +43,17 @@ const createTools = (ctx: AgentContext) => ({
 // @ts-ignore
   save_memory: tool({
     description: 'Save a permanent fact about the user or their preferences.',
-    parameters: z.object({ 
-      fact: z.string().optional(), 
-      user_id: z.string().optional(),
-      key: z.string().optional(),
-      value: z.string().optional()
-    }) as any,
-    execute: async ({ fact, key, value }: { fact?: string, key?: string, value?: string }) => {
-      const content = fact || (key && value ? `${key}: ${value}` : (value || key || 'Unknown info'))
-      await saveFact(ctx.userId, content)
-      return `Saved fact: "${content}"`
+    // Generalized Flexible Schema: Accepts any object structure to handle model variance
+    parameters: z.object({}).passthrough() as any, 
+    execute: async (args: Record<string, any>) => {
+      // Intelligently extract the fact from whatever the model sent
+      const fact = args.fact || args.content || args.text || args.memory || args.description;
+      const kv = (args.key && args.value) ? `${args.key}: ${args.value}` : null;
+      
+      const distinctFact = fact || kv || JSON.stringify(args); // Fallback to raw JSON if all else fails
+      
+      await saveFact(ctx.userId, distinctFact)
+      return `Saved information: "${distinctFact}"`
     },
   }),
 // @ts-ignore
