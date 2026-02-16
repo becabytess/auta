@@ -46,7 +46,8 @@ const createTools = (ctx: AgentContext) => ({
     parameters: z.object({
       fact: z.string().describe('The fact to remember. If storing a key-value pair, format it as "Key: Value".')
     }) as any,
-    execute: async ({ fact }: { fact: string }) => {
+    execute: async (args: any) => {
+      const fact = typeof args === 'string' ? args : (args.fact || args.content || args.text || JSON.stringify(args));
       await saveFact(ctx.userId, fact)
       return `Saved fact: "${fact}"`
     },

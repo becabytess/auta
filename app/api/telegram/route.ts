@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
         
         if (!responseText || responseText.trim() === '') {
           if (agentResult.toolCalls && agentResult.toolCalls.length > 0) {
-            const toolNames = agentResult.toolCalls.map((t: any) => t.toolName).join(', ')
-            await bot.api.sendMessage(chatId, `(Executed tools: ${toolNames})`)
+            const toolDetails = agentResult.toolCalls.map((t: any) => `${t.toolName}(${JSON.stringify(t.args)})`).join(', ')
+            await bot.api.sendMessage(chatId, `(Executed: ${toolDetails})`)
           } else {
             await bot.api.sendMessage(chatId, '(No response generated)')
           }
