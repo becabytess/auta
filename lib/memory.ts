@@ -5,7 +5,14 @@ const HISTORY_LIMIT = 20
 export async function getHistory(chatId: number) {
   const key = `history:${chatId}`
   const raw = await redis.lrange(key, 0, -1)
-  return raw.map((item) => JSON.parse(item)).reverse()
+  return raw.map((item) => {
+    try {
+      return typeof item === 'string' ? JSON.parse(item) : item
+    } catch (e) {
+      console.error('Failed to parse history item:', item)
+      return null
+    }
+  }).filter(Boolean).reverse()
 }
 
 export async function addMessage(chatId: number, role: 'user' | 'assistant' | 'system', content: string) {
