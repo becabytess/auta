@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { bot } from '@/lib/telegram'
 import { runAgent } from '@/agent/core'
+import { addMessage } from '@/lib/memory'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,13 @@ export async function POST(req: NextRequest) {
       const userId = update.message.from?.id || chatId
       const text = update.message.text
       
+      if (text === '/reset') {
+        const { redis } = require('@/lib/redis')
+        await redis.del(`history:${chatId}`)
+        await bot.api.sendMessage(chatId, 'Memory wiped. I am tabula rasa.')
+        return NextResponse.json({ ok: true })
+      }
+
       console.log(`Received message from ${userId}: ${text}`)
 
       try {
@@ -27,6 +35,7 @@ export async function POST(req: NextRequest) {
       } catch (innerError: any) {
         console.error('Agent execution failed:', innerError)
         const errorMessage = innerError?.message || JSON.stringify(innerError)
+        await addMessage(chatId, 'system', `Tool execution failed: ${errorMessage.substring(0, 200)}`)
         await bot.api.sendMessage(chatId, `CRASH DEBUG: ${errorMessage.substring(0, 1000)}`)
       }
     }
