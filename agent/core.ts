@@ -43,10 +43,16 @@ const createTools = (ctx: AgentContext) => ({
 // @ts-ignore
   save_memory: tool({
     description: 'Save a permanent fact about the user or their preferences.',
-    parameters: z.object({ fact: z.string(), user_id: z.string().optional() }) as any,
-    execute: async ({ fact }: { fact: string }) => {
-      await saveFact(ctx.userId, fact)
-      return `Saved fact: "${fact}"`
+    parameters: z.object({ 
+      fact: z.string().optional(), 
+      user_id: z.string().optional(),
+      key: z.string().optional(),
+      value: z.string().optional()
+    }) as any,
+    execute: async ({ fact, key, value }: { fact?: string, key?: string, value?: string }) => {
+      const content = fact || (key && value ? `${key}: ${value}` : (value || key || 'Unknown info'))
+      await saveFact(ctx.userId, content)
+      return `Saved fact: "${content}"`
     },
   }),
 // @ts-ignore
