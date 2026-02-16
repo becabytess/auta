@@ -24,9 +24,10 @@ export async function POST(req: NextRequest) {
         await bot.api.sendChatAction(chatId, 'typing')
         const responseText = await runAgent(text, chatId, userId)
         await bot.api.sendMessage(chatId, responseText, { parse_mode: 'Markdown' })
-      } catch (innerError) {
+      } catch (innerError: any) {
         console.error('Agent execution failed:', innerError)
-        await bot.api.sendMessage(chatId, 'Error: My brain timed out or crashed.')
+        const errorMessage = innerError?.message || JSON.stringify(innerError)
+        await bot.api.sendMessage(chatId, `CRASH DEBUG: ${errorMessage.substring(0, 1000)}`)
       }
     }
     
