@@ -117,7 +117,7 @@ Be concise. Use tools if necessary.
 
   // 5. Run AI
   const modelToUse = process.env.GROQ_API_KEY 
-    ? groq('llama3-70b-8192') 
+    ? groq('llama-3.3-70b-versatile') 
     : openai('gpt-4o')
 
   console.log(`Using model: ${process.env.GROQ_API_KEY ? 'Groq Llama 3' : 'OpenAI GPT-4o'}`)
