@@ -50,7 +50,8 @@ const createTools = (ctx: AgentContext) => ({
       user_id: z.string().optional(),
       content: z.string().optional(),
       text: z.string().optional()
-    }) as any,
+      text: z.string().optional()
+    }).catchall(z.any()) as any,
     execute: async (args: any) => {
       // Intelligently extract the fact from whatever the model sent
       const fact = args.fact || args.content || args.text || args.memory || args.description;
