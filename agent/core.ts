@@ -132,10 +132,15 @@ Your goal is to be helpful, precise, and efficient.
 - Use 'save_fact' ONLY when the user explicitly asks you to remember something or key information is provided.
 - Do NOT call 'save_fact' for every message.
 
-# TOOL USAGE
-- Use 'search' for current events.
-- Use 'save_fact' only for important facts.
-- Use 'save_skill' for new procedures.
+# TOOL USAGE (IMPORTANT)
+- To use a tool, output exactly: TOOL: tool_name(arguments)
+- arguments can be a JSON object OR a simple string.
+- EXAMPLES:
+  - TOOL: save_fact("My name is Beka")
+  - TOOL: search("latest news about AI")
+  - TOOL: save_skill({"name": "morning", "instructions": "drink coffee"})
+- Do not explain the tool call, just output it.
+- You will receive a TOOL_OUTPUT message with the result.
 `
   
   // 3. Construct System Prompt
@@ -155,35 +160,93 @@ Be concise. Use tools if necessary.
   // 4. Update History (User Message)
   await addMessage(chatId, 'user', message)
 
-  // 5. Run AI
+  // 5. Run AI with custom "ReAct" loop for robustness
   const modelToUse = process.env.GROQ_API_KEY 
     ? groq('openai/gpt-oss-120b') 
     : openai('gpt-4o')
 
   console.log(`Using model: ${process.env.GROQ_API_KEY ? 'Groq (gpt-oss-120b)' : 'OpenAI GPT-4o'}`)
 
-  const result = await generateText({
-    model: modelToUse, // Or other model
-    system: systemPrompt,
-    tools: createTools({ userId, chatId }),
-    // @ts-ignore
-    maxSteps: 5, // Allow multi-step reasoning
-    messages: [
-      ...history.map((h: any) => ({ role: h.role, content: h.content })),
-      { role: 'user', content: message }
-    ]
-  })
+  const tools = createTools({ userId, chatId });
+  const searchToolExecute = tools.search.execute;
+  const saveFactToolExecute = tools.save_fact.execute;
+  const saveSkillToolExecute = tools.save_skill.execute;
 
-  // 6. Update History (Assistant Response)
-  if (result.text) {
-    await addMessage(chatId, 'assistant', result.text)
-  } else if (result.toolCalls && result.toolCalls.length > 0) {
-    await addMessage(chatId, 'assistant', `(Tool calls: ${result.toolCalls.map(t => t.toolName).join(', ')})`)
-  }
+  let currentMessages: any[] = [
+    { role: 'system', content: systemPrompt },
+    ...history.map((h: any) => ({ role: h.role, content: h.content })),
+    { role: 'user', content: message }
+  ];
+  let turns = 0
+  const maxTurns = 5
+  let check: { text: string; toolCalls: any[]; raw?: any } = { text: '', toolCalls: [] as any[] } // Mock result structure for route.ts
 
-  return {
-    text: result.text,
-    toolCalls: result.toolCalls,
-    raw: result
+  while (turns < maxTurns) {
+    turns++
+    const result = await generateText({
+      model: modelToUse,
+      messages: currentMessages,
+      // Disable native tools to force text output
+    })
+
+    const response = result.text
+    check.text = response
+
+    // Parse TOOL: name(args)
+    // Regex matches: TOOL: tool_name({ ... })
+    // We look for the LAST occurrence or FIRST? Usually separate lines.
+    const toolRegex = /TOOL:\s*(\w+)\s*\((.*?)\)/g
+    const matches = [...response.matchAll(toolRegex)]
+
+    if (matches.length > 0) {
+       // Found tool call(s)
+       for (const match of matches) {
+         const toolName = match[1]
+         let argsString = match[2]
+         let args: any = {}
+         try {
+            // Try to fix loose JSON if needed, or just parse
+            argsString = argsString.replace(/'/g, '"') // simple fix
+            args = JSON.parse(argsString)
+         } catch (e) {
+            // Argument likely string literal "..."??
+            // If it looks like "...", treat as { fact: "..." } for save_fact?
+            if (toolName === 'save_fact') args = { fact: argsString.replace(/^["']|["']$/g, '') }
+            else if (toolName === 'search') args = { query: argsString.replace(/^["']|["']$/g, '') }
+            else args = { raw: argsString }
+         }
+         
+         check.toolCalls.push({ toolName, args })
+         
+         // Execute
+         let toolResult = ''
+         if (toolName === 'save_fact') {
+            const f = args.fact || args.raw || JSON.stringify(args)
+            toolResult = await saveFactToolExecute({ fact: f })
+         } else if (toolName === 'search') {
+            const q = args.query || args.raw || 'news'
+            toolResult = await searchToolExecute({ query: q })
+         } else if (toolName === 'save_skill') {
+            toolResult = await saveSkillToolExecute({ name: args.name, instructions: args.instructions })
+         } else {
+            toolResult = "Tool not found or not implemented in custom ReAct loop."
+         }
+
+         // Append tool result to history
+         currentMessages.push({ role: 'assistant', content: response })
+         currentMessages.push({ role: 'user', content: `TOOL_OUTPUT (${toolName}): ${toolResult}` })
+       }
+       // Loop continues to generate response to tool output
+    } else {
+       // No tools, final response
+       // Save to history?
+       await addMessage(chatId, 'assistant', response)
+       check.text = response
+       check.raw = { steps: currentMessages } // Fake steps for debug
+       return check
+    }
   }
+  
+  return check
+  return check
 }
