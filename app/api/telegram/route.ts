@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       try {
         await bot.api.sendChatAction(chatId, 'typing')
         const responseText = await runAgent(text, chatId, userId)
-        await bot.api.sendMessage(chatId, responseText, { parse_mode: 'Markdown' })
+        await bot.api.sendMessage(chatId, responseText)
       } catch (innerError: any) {
         console.error('Agent execution failed:', innerError)
         const errorMessage = innerError?.message || JSON.stringify(innerError)
