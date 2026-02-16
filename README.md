@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenClaw Lite (Serverless Edition)
 
-## Getting Started
+A lightweight, serverless version of the OpenClaw agent designed for Telegram, running on Next.js and Vercel.
+It features persistent memory (Upstash Redis), web search, and skill learning capabilities.
 
-First, run the development server:
+## Features
+
+- **Personality**: Defined in `personalities/SOUL.md`.
+- **Memory**: Remembers user facts and context via Redis.
+- **Skills**: Can learn new procedures (`save_skill`) and recall them.
+- **Tools**: Web Search (Tavily), Browsing (Fetch), Memory Management.
+- **Serverless**: Runs on Vercel Free Tier.
+
+## Prerequisites
+
+1. **Telegram Bot Token**: Get from [@BotFather](https://t.me/BotFather).
+2. **Upstash Redis**: Create a free database at [upstash.com](https://upstash.com).
+3. **OpenAI API Key**: Or Groq key (compatible).
+4. **Tavily API Key**: For web search.
+
+## Setup
+
+1. Clone the repo.
+2. `npm install`
+3. Copy `.env.local.example` to `.env.local` and fill in keys.
+
+## Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To test locally, use `ngrok` to expose port 3000 and set the webhook to your ngrok URL.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Push to GitHub.
+2. Import to Vercel.
+3. Add Environment Variables in Vercel Dashboard.
+4. Deploy.
 
-## Learn More
+## Post-Deployment (IMPORTANT)
 
-To learn more about Next.js, take a look at the following resources:
+Set your Telegram bot webhook to your localized Vercel URL:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://<YOUR_VERCEL_DOMAIN>/api/telegram&secret_token=<OPTIONAL_SECRET>"
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Creating Skills
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+You can teach the bot new skills by explaining them.
+_User_: "Here is how you check my flight status: Go to google.com/flights, search for flight AA123, and read the time."
+_Bot_: (Calls `save_skill("check_flight", "Go to google...")`)
+_User_: "Check my flight."
+_Bot_: (Recalls skill and executes steps).
