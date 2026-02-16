@@ -151,14 +151,7 @@ Your mission is to assist the user with precision, speed, and absolute reliabili
 - Check "CORE FACTS" for user identity.
 
 
-# TOOL USAGE (IMPORTANT)
-- To use a tool, output exactly: TOOL: tool_name(arguments)
-- arguments can be a JSON object OR a simple string.
-- EXAMPLES:
-  - TOOL: save_fact("My name is Beka")
-  - TOOL: search("latest news about AI")
-  - TOOL: save_skill({"name": "morning", "instructions": "drink coffee"})
-- Do not explain the tool call, just output it.
+
 # TOOL USAGE (IMPORTANT)
 - To use a tool, you MUST output exactly: TOOL: tool_name(arguments)
 - If you do not output this line, the action DOES NOT happen.
@@ -174,8 +167,8 @@ Your mission is to assist the user with precision, speed, and absolute reliabili
 `
   
   // 3. Construct System Prompt
-  const systemPrompt = `
-${soulContent}
+  const finalSystemPrompt = `
+${SYSTEM_PROMPT}
 
 # USER CONTEXT
 - User ID: ${userId}
@@ -203,7 +196,7 @@ Be concise. Use tools if necessary.
   const saveSkillToolExecute = tools.save_skill.execute;
 
   let currentMessages: any[] = [
-    { role: 'system', content: systemPrompt },
+    { role: 'system', content: finalSystemPrompt },
     ...history.map((h: any) => ({ role: h.role, content: h.content })),
     { role: 'user', content: message }
   ];
