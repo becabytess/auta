@@ -47,7 +47,14 @@ const createTools = (ctx: AgentContext) => ({
       fact: z.string().describe('The fact to remember. If storing a key-value pair, format it as "Key: Value".')
     }) as any,
     execute: async (args: any) => {
-      const fact = typeof args === 'string' ? args : (args.fact || args.content || args.text || JSON.stringify(args));
+      // Robust extraction
+      if (!args) return 'Error: No arguments provided.'
+      const fact = typeof args === 'string' ? args : (args.fact || args.content || args.text || (Object.keys(args).length > 0 ? JSON.stringify(args) : null));
+      
+      if (!fact || fact === '{}' || fact === '[]') {
+         return 'Error: Empty fact provided. Please provide text.'
+      }
+
       await saveFact(ctx.userId, fact)
       return `Saved fact: "${fact}"`
     },
@@ -89,6 +96,17 @@ const createTools = (ctx: AgentContext) => ({
       } catch (e) {
         return 'Failed to browse page.';
       }
+    }
+  }),
+  // @ts-ignore
+  debug_facts: tool({
+    description: 'Retrieve and display all known facts for debugging purposes. Only use if explicitly asked by the user to "debug facts" or similar.',
+    parameters: z.object({}) as any,
+    execute: async () => {
+      const { redis } = require('@/lib/redis')
+      const rawFacts = await redis.smembers(`facts:${ctx.userId}`)
+      const facts = rawFacts.map((f: any) => typeof f === 'object' ? JSON.stringify(f) : f)
+      return `Creating dump of known facts:\n${facts.join('\n') || '(No facts found)'}`
     }
   })
 })

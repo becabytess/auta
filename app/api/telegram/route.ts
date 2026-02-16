@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
 
       if (text === '/facts') {
         const { redis } = require('@/lib/redis')
-        const facts = await redis.smembers(`facts:${userId}`)
+        const rawFacts = await redis.smembers(`facts:${userId}`)
+        const facts = rawFacts.map((f: any) => typeof f === 'object' ? JSON.stringify(f) : f)
         await bot.api.sendMessage(chatId, `Creating dump of known facts:\n${facts.join('\n') || '(No facts found)'}`)
         return NextResponse.json({ ok: true })
       }
