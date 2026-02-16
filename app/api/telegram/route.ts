@@ -41,15 +41,29 @@ export async function POST(req: NextRequest) {
         const agentResult = await runAgent(text, chatId, userId)
         const responseText = agentResult.text
         
+        // Comprehensive Debug Log
+        const stepsLog = agentResult.raw.steps?.map((s: any, i: number) => 
+          `Step ${i+1}: Output=${s.text?.substring(0,50) || 'None'}, Tools=${s.toolCalls?.map((t:any) => `${t.toolName}(${JSON.stringify(t.args)})`).join(', ') || 'None'}`
+        ).join('\n') || 'No steps info';
+
         if (!responseText || responseText.trim() === '') {
           if (agentResult.toolCalls && agentResult.toolCalls.length > 0) {
-            const toolDetails = agentResult.toolCalls.map((t: any) => `${t.toolName}(${JSON.stringify(t.args)})`).join(', ')
-            await bot.api.sendMessage(chatId, `(Executed: ${toolDetails})`)
+             // Just use the executed tool message + debug log
+             const toolDetails = agentResult.toolCalls.map((t: any) => `${t.toolName}(${JSON.stringify(t.args)})`).join(', ')
+             await bot.api.sendMessage(chatId, `(Executed: ${toolDetails})\n\nDEBUG LOG:\n${stepsLog}`)
           } else {
-            await bot.api.sendMessage(chatId, '(No response generated)')
+             await bot.api.sendMessage(chatId, `(No response generated)\n\nDEBUG LOG:\n${stepsLog}`)
           }
         } else {
-          await bot.api.sendMessage(chatId, responseText)
+          // Send response normally, but append debug log if it was seemingly empty before (or just for now always append?)
+          // For now, let's keep it clean unless requested, BUT user asked to "log everything".
+          await bot.api.sendMessage(chatId, `${responseText}`)
+          // Optional: send log in separate message? No, that's spammy.
+          // But user wants to SEE what model did.
+          // I will append log if it involved tools.
+          if (agentResult.raw.steps?.length > 1 || agentResult.toolCalls?.length > 0) {
+             await bot.api.sendMessage(chatId, `DEBUG STEPS:\n${stepsLog}`)
+          }
         }
       } catch (innerError: any) {
         console.error('Agent execution failed:', innerError)

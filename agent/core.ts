@@ -183,6 +183,7 @@ Be concise. Use tools if necessary.
 
   return {
     text: result.text,
-    toolCalls: result.toolCalls
+    toolCalls: result.toolCalls,
+    raw: result
   }
 }
