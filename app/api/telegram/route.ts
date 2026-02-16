@@ -8,7 +8,6 @@ export async function POST(req: NextRequest) {
   try {
     const update = await req.json()
     
-    // Verify secret token (Optional but recommended)
     const secretToken = req.headers.get('X-Telegram-Bot-Api-Secret-Token')
     if (process.env.TELEGRAM_SECRET_TOKEN && secretToken !== process.env.TELEGRAM_SECRET_TOKEN) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -19,17 +18,8 @@ export async function POST(req: NextRequest) {
       const userId = update.message.from?.id || chatId
       const text = update.message.text
       
-      // Log for debugging
       console.log(`Received message from ${userId}: ${text}`)
 
-      // Acknowledge receipt immediately (Telegram expects 200 OK)
-      // For Vercel, we must process quickly or use background jobs.
-      // Since we use maxSteps=5 in AI, checking processing time is important.
-      // If it takes >10s (Vercel hobby limit), it will timeout.
-      // PRO TIP: On Vercel Hobby, functions timeout after 10s (sometimes 15s).
-      // We should ideally use Inngest or a Queue, but for "LiteClaw" prototype, 
-      // direct execution is fine if we keep tasks short.
-      
       try {
         await bot.api.sendChatAction(chatId, 'typing')
         const responseText = await runAgent(text, chatId, userId)
