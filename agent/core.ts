@@ -41,26 +41,14 @@ const createTools = (ctx: AgentContext) => ({
     },
   }),
 // @ts-ignore
-  save_memory: tool({
-    description: 'Save a permanent fact about the user or their preferences.',
+  save_fact: tool({
+    description: 'Save a permanent fact about the user or their preferences. Accepts a single string argument "fact". Handle key-value pairs by formatting them as "Key: Value".',
     parameters: z.object({
-      fact: z.string().optional().describe('The fact to remember'),
-      key: z.string().optional().describe('Key for key-value pair'),
-      value: z.string().optional().describe('Value for key-value pair'),
-      user_id: z.string().optional(),
-      content: z.string().optional(),
-      text: z.string().optional()
-      text: z.string().optional()
-    }).catchall(z.any()) as any,
-    execute: async (args: any) => {
-      // Intelligently extract the fact from whatever the model sent
-      const fact = args.fact || args.content || args.text || args.memory || args.description;
-      const kv = (args.key && args.value) ? `${args.key}: ${args.value}` : null;
-      
-      const distinctFact = fact || kv || JSON.stringify(args); 
-      
-      await saveFact(ctx.userId, distinctFact)
-      return `Saved information: "${distinctFact}"`
+      fact: z.string().describe('The fact to remember. If storing a key-value pair, format it as "Key: Value".')
+    }) as any,
+    execute: async ({ fact }: { fact: string }) => {
+      await saveFact(ctx.userId, fact)
+      return `Saved fact: "${fact}"`
     },
   }),
 // @ts-ignore
@@ -127,13 +115,13 @@ You are OpenClaw, a highly capable and slightly irreverent AI assistant. You ope
 
 # MEMORY & LEARNING
 - You have access to a persistent memory store (Redis).
-- Use 'save_memory' ONLY when the user explicitly asks you to remember something or key information is provided.
-- Do NOT call 'save_memory' for every message.
+- Use 'save_fact' ONLY when the user explicitly asks you to remember something or key information is provided.
+- Do NOT call 'save_fact' for every message.
 - Check memory for context.
 
 # TOOL USAGE
 - Use 'search' for current events.
-- Use 'save_memory' only for important facts.
+- Use 'save_fact' only for important facts.
 - Use 'save_skill' for new procedures.
 `
   
