@@ -30,9 +30,16 @@ export async function POST(req: NextRequest) {
 
       try {
         await bot.api.sendChatAction(chatId, 'typing')
-        const responseText = await runAgent(text, chatId, userId)
+        const agentResult = await runAgent(text, chatId, userId)
+        const responseText = agentResult.text
+        
         if (!responseText || responseText.trim() === '') {
-          await bot.api.sendMessage(chatId, '(Action completed silently)')
+          if (agentResult.toolCalls && agentResult.toolCalls.length > 0) {
+            const toolNames = agentResult.toolCalls.map((t: any) => t.toolName).join(', ')
+            await bot.api.sendMessage(chatId, `(Executed tools: ${toolNames})`)
+          } else {
+            await bot.api.sendMessage(chatId, '(No response generated)')
+          }
         } else {
           await bot.api.sendMessage(chatId, responseText)
         }

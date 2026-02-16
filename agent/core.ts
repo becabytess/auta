@@ -162,7 +162,14 @@ Be concise. Use tools if necessary.
   })
 
   // 6. Update History (Assistant Response)
-  await addMessage(chatId, 'assistant', result.text)
+  if (result.text) {
+    await addMessage(chatId, 'assistant', result.text)
+  } else if (result.toolCalls && result.toolCalls.length > 0) {
+    await addMessage(chatId, 'assistant', `(Tool calls: ${result.toolCalls.map(t => t.toolName).join(', ')})`)
+  }
 
-  return result.text
+  return {
+    text: result.text,
+    toolCalls: result.toolCalls
+  }
 }
