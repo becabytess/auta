@@ -140,7 +140,17 @@ Your goal is to be helpful, precise, and efficient.
   - TOOL: search("latest news about AI")
   - TOOL: save_skill({"name": "morning", "instructions": "drink coffee"})
 - Do not explain the tool call, just output it.
-- You will receive a TOOL_OUTPUT message with the result.
+# TOOL USAGE (IMPORTANT)
+- To use a tool, you MUST output exactly: TOOL: tool_name(arguments)
+- If you do not output this line, the action DOES NOT happen.
+- Do NOT just say "I saved it". You MUST output the command.
+- arguments can be a JSON object OR a simple string.
+- EXAMPLES:
+  - TOOL: save_fact("My name is Beka")
+  - TOOL: search("latest news about AI")
+  - TOOL: save_skill({"name": "morning", "instructions": "drink coffee"})
+- Do not explain the tool call, just output it.
+- After the tool runs, you will get a TOOL_OUTPUT message. Then you can confirm to the user.
 `
   
   // 3. Construct System Prompt
@@ -192,8 +202,8 @@ Be concise. Use tools if necessary.
     const response = result.text
     check.text = response
 
-    // Parse TOOL: name(args) - attempt to handle multiline with [\s\S]
-    const toolRegex = /TOOL:\s*(\w+)\s*\(([\s\S]*?)\)/g
+    // Parse TOOL: name(args) - attempt to handle multiline with [\s\S], case insensitive
+    const toolRegex = /TOOL:\s*(\w+)\s*\(([\s\S]*?)\)/gi
     const matches = [...response.matchAll(toolRegex)]
 
     if (matches.length > 0) {
@@ -246,7 +256,9 @@ Be concise. Use tools if necessary.
        // Save to history?
        await addMessage(chatId, 'assistant', response)
        check.text = response
-       check.raw = { steps: currentMessages } // Fake steps for debug
+       // Push final response to debug steps
+       // We create a copy so we don't mutate currentMessages if it's used elsewhere (it's not)
+       check.raw = { steps: [...currentMessages, { role: 'assistant', content: response }] } 
        return check
     }
   }
